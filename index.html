@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Shop Admin - Manage your shop easily">
-  <meta name="theme-color" content="#4285f4">
+  <meta name="theme-color" content="#667eea">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Shop Admin">
   
   <title>Shop Admin</title>
   
-  <!-- Manifest -->
+  <!-- Manifest for GitHub Pages -->
   <link rel="manifest" href="manifest.json">
   
   <!-- Icons -->
@@ -29,8 +29,10 @@
     
     html, body { 
       height: 100%; 
+      width: 100%;
       overflow: hidden; 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      position: fixed;
     }
     
     iframe { 
@@ -47,7 +49,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: #4285f4;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -62,12 +64,12 @@
     }
     
     .loader {
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(255,255,255,0.3);
+      width: 60px;
+      height: 60px;
+      border: 6px solid rgba(255,255,255,0.3);
       border-top-color: white;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: spin 0.8s linear infinite;
     }
     
     @keyframes spin {
@@ -76,56 +78,109 @@
     
     #loading h2 {
       color: white;
-      margin-top: 20px;
-      font-weight: 500;
+      margin-top: 24px;
+      font-weight: 600;
+      font-size: 20px;
     }
     
-    /* Install prompt */
+    /* Install prompt - FIXED positioning */
     #install-prompt {
       position: fixed;
-      bottom: -100px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 0;
+      left: 0;
+      right: 0;
       background: white;
-      padding: 15px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 16px 20px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
       display: flex;
       align-items: center;
-      gap: 15px;
-      max-width: 90%;
-      transition: bottom 0.3s ease;
-      z-index: 1000;
+      justify-content: space-between;
+      gap: 12px;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 10000;
     }
     
     #install-prompt.show {
-      bottom: 20px;
+      transform: translateY(0);
+    }
+    
+    .install-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .install-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .install-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .install-buttons {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
     }
     
     #install-prompt button {
-      background: #4285f4;
+      background: #667eea;
       color: white;
       border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
+      padding: 10px 20px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background 0.2s;
     }
     
-    #install-prompt button:hover {
-      background: #357ae8;
+    #install-prompt button:active {
+      background: #5568d3;
+      transform: scale(0.98);
     }
     
     #install-prompt .close {
-      background: transparent;
-      color: #666;
-      padding: 4px 8px;
+      background: #f3f4f6;
+      color: #6b7280;
+      padding: 10px 16px;
+      min-width: auto;
     }
     
-    #install-prompt .close:hover {
-      background: #f5f5f5;
-      color: #333;
+    #install-prompt .close:active {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    
+    @media (max-width: 480px) {
+      #install-prompt {
+        padding: 14px 16px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
+      }
+      
+      .install-text {
+        font-size: 13px;
+      }
+      
+      #install-prompt button {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+      
+      #install-prompt .close {
+        padding: 8px 12px;
+      }
     }
   </style>
 </head>
@@ -136,28 +191,42 @@
     <h2>Loading Shop Admin...</h2>
   </div>
   
-  <!-- Install prompt -->
+  <!-- Install prompt - FIXED -->
   <div id="install-prompt">
-    <span>📱 Install Shop Admin for quick access</span>
-    <button id="install-btn">Install</button>
-    <button class="close" id="close-prompt">✕</button>
+    <div class="install-content">
+      <span class="install-icon">📱</span>
+      <span class="install-text">Install app for easier access</span>
+    </div>
+    <div class="install-buttons">
+      <button id="install-btn">Install</button>
+      <button class="close" id="close-prompt">✕</button>
+    </div>
   </div>
   
   <!-- Main iframe -->
   <iframe 
     id="app-frame"
     src="https://script.google.com/macros/s/AKfycbxNvhn-i5s1sEakMKjIsbZK5ykoRYgEpqMoejpnHgUDNjSqpNR8LBKrkgn9FgVb0Os/exec" 
-    allow="*"
+    allow="camera; geolocation"
     title="Shop Admin Application">
   </iframe>
 
   <script>
-    // Service Worker Registration
+    // Service Worker Registration - Fixed for GitHub Pages
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker registered:', reg.scope))
-          .catch(err => console.error('Service Worker registration failed:', err));
+        // Get the correct scope
+        const scope = location.pathname.substring(0, location.pathname.lastIndexOf('/') + 1);
+        
+        navigator.serviceWorker.register('sw.js', { 
+          scope: scope || '/'
+        })
+          .then(reg => {
+            console.log('✅ Service Worker registered:', reg.scope);
+          })
+          .catch(err => {
+            console.log('❌ Service Worker registration failed:', err);
+          });
       });
     }
 
@@ -171,44 +240,70 @@
       }, 500);
     });
 
-    // PWA Install Prompt
+    // PWA Install Prompt - IMPROVED
     let deferredPrompt;
     const installPrompt = document.getElementById('install-prompt');
     const installBtn = document.getElementById('install-btn');
     const closePrompt = document.getElementById('close-prompt');
 
+    // Check if already installed
+    function isInstalled() {
+      // Check if running in standalone mode
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        return true;
+      }
+      // Check iOS standalone mode
+      if (window.navigator.standalone === true) {
+        return true;
+      }
+      return false;
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       
-      // Show install prompt after 3 seconds if not already installed
+      console.log('✅ Install prompt available');
+      
+      // Show install prompt after 2 seconds if not installed
       setTimeout(() => {
-        if (!window.matchMedia('(display-mode: standalone)').matches) {
+        if (!isInstalled() && !sessionStorage.getItem('installPromptDismissed')) {
           installPrompt.classList.add('show');
         }
-      }, 3000);
+      }, 2000);
     });
 
     installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
+      if (!deferredPrompt) {
+        console.log('❌ No install prompt available');
+        return;
+      }
+      
+      installPrompt.classList.remove('show');
       
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       console.log(`User response: ${outcome}`);
       
       deferredPrompt = null;
-      installPrompt.classList.remove('show');
     });
 
     closePrompt.addEventListener('click', () => {
       installPrompt.classList.remove('show');
+      sessionStorage.setItem('installPromptDismissed', 'true');
     });
 
-    // Check if already installed
+    // Handle successful installation
     window.addEventListener('appinstalled', () => {
-      console.log('PWA installed successfully');
+      console.log('✅ PWA installed successfully');
       installPrompt.classList.remove('show');
+      deferredPrompt = null;
     });
+
+    // Check on load
+    if (isInstalled()) {
+      console.log('✅ App is already installed');
+    }
   </script>
 </body>
 </html>
