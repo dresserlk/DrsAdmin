@@ -2,10 +2,18 @@
 
 // === API CONFIGURATION ===
 const urlParams = new URLSearchParams(window.location.search);
-const API_URL = urlParams.get('api') || prompt('Please enter your Google Apps Script API URL:');
+const API_URL = urlParams.get('api');
 
 if (!API_URL) {
-  alert('API URL is required!');
+  document.body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px;">
+      <div style="background:white;padding:40px;border-radius:20px;max-width:500px;">
+        <h2 style="color:#667eea;margin-bottom:20px;">⚠️ Access Required</h2>
+        <p style="margin-bottom:20px;">Please access this app through the Google Apps Script URL to authenticate.</p>
+        <p style="color:#666;font-size:14px;">The API URL parameter is missing.</p>
+      </div>
+    </div>
+  `;
   throw new Error('No API URL provided');
 }
 
@@ -16,22 +24,89 @@ let editingRowIndex = -1;
 let selectedDataUrl = null;
 let selectedFilename = null;
 let existingImageUrl = '';
+let authToken = null;
+
+// === AUTHENTICATION FLOW ===
+async function authenticate() {
+  return new Promise((resolve, reject) => {
+    // Open authentication popup
+    const width = 600;
+    const height = 700;
+    const left = (screen.width / 2) - (width / 2);
+    const top = (screen.height / 2) - (height / 2);
+    
+    const authWindow = window.open(
+      API_URL,
+      'Google Sign In',
+      `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no`
+    );
+    
+    if (!authWindow) {
+      reject(new Error('Popup blocked. Please allow popups for this site.'));
+      return;
+    }
+    
+    // Check if window is closed
+    const checkWindow = setInterval(() => {
+      if (authWindow.closed) {
+        clearInterval(checkWindow);
+        resolve(true);
+      }
+    }, 500);
+    
+    // Timeout after 2 minutes
+    setTimeout(() => {
+      clearInterval(checkWindow);
+      if (!authWindow.closed) {
+        authWindow.close();
+      }
+      reject(new Error('Authentication timeout'));
+    }, 120000);
+  });
+}
 
 // === API CALL WRAPPER ===
 async function callAPI(action, params = {}) {
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: action,
-        ...params
-      })
+    // Build URL with parameters for GET request
+    const apiParams = new URLSearchParams({
+      action: action,
+      _t: Date.now() // Cache buster
+    });
+    
+    // Add other parameters
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== null && value !== undefined) {
+        if (typeof value === 'object') {
+          apiParams.append(key, JSON.stringify(value));
+        } else {
+          apiParams.append(key, value.toString());
+        }
+      }
+    }
+    
+    const url = `${API_URL}?${apiParams.toString()}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      mode: 'cors',
+      cache: 'no-cache',
+      redirect: 'follow'
     });
 
-    const result = await response.json();
+    const text = await response.text();
+    let result;
+    
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      // If response is not JSON, it might be the login page
+      if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+        throw new Error('Authentication required. Please sign in to Google.');
+      }
+      throw new Error('Invalid response from server');
+    }
     
     if (!result.success) {
       throw new Error(result.error || 'API call failed');
@@ -57,7 +132,20 @@ async function refreshDataAndRender() {
     showLoading(false);
   } catch (error) {
     showLoading(false);
-    alert('Error: ' + error.message);
+    
+    if (error.message.includes('Authentication required')) {
+      if (confirm('You need to sign in to Google to use this app. Click OK to sign in.')) {
+        try {
+          await authenticate();
+          // Retry after authentication
+          refreshDataAndRender();
+        } catch (authError) {
+          alert('Authentication failed: ' + authError.message);
+        }
+      }
+    } else {
+      alert('Error: ' + error.message + '\n\nMake sure you have access to the spreadsheet and are signed into the correct Google account.');
+    }
   }
 }
 
