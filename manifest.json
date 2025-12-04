@@ -1,13 +1,13 @@
 {
   "name": "Shop Admin",
   "short_name": "ShopAdmin",
-  "description": "Manage your shop inventory and operations easily",
-  "start_url": "/",
+  "description": "Manage your shop inventory and operations",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4285f4",
+  "theme_color": "#667eea",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
       "src": "icon-192.png",
@@ -28,8 +28,9 @@
       "name": "Open Shop Admin",
       "short_name": "Admin",
       "description": "Open Shop Admin Dashboard",
-      "url": "/",
+      "url": "./",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }
