@@ -1,153 +1,87 @@
-// Shop Admin PWA Service Worker
-const CACHE_NAME = 'shop-admin-pwa-v1.0.0';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+const CACHE_NAME = 'shop-admin-v1';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
-  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching app shell');
-        return cache.addAll(ASSETS_TO_CACHE);
+        console.log('Cache opened');
+        return cache.addAll(urlsToCache);
       })
-      .then(() => self.skipWaiting())
       .catch((err) => {
-        console.error('[SW] Cache failed:', err);
+        console.log('Cache failed:', err);
       })
   );
+  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
-  
   event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames
-            .filter((name) => name !== CACHE_NAME)
-            .map((name) => {
-              console.log('[SW] Deleting old cache:', name);
-              return caches.delete(name);
-            })
-        );
-      })
-      .then(() => self.clients.claim())
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
   );
+  self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - network first, then cache fallback
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-  
-  // Skip cross-origin requests (like Google Apps Script)
-  if (url.origin !== location.origin) {
-    // Let network handle it directly
-    event.respondWith(fetch(request));
+  // For Google Apps Script, always use network
+  if (event.request.url.includes('script.google.com')) {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return new Response(
+            '<html><body><h1>Offline</h1><p>Unable to load app. Please check your connection.</p></body></html>',
+            { headers: { 'Content-Type': 'text/html' } }
+          );
+        })
+    );
     return;
   }
-  
-  // For same-origin requests: Network first, fallback to cache
+
+  // For other resources, try cache first, then network
   event.respondWith(
-    fetch(request)
+    caches.match(event.request)
       .then((response) => {
-        // Clone response to cache it
-        const responseClone = response.clone();
-        
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseClone);
+        if (response) {
+          return response;
+        }
+        return fetch(event.request).then((response) => {
+          // Cache new resources
+          if (!response || response.status !== 200 || response.type === 'error') {
+            return response;
+          }
+          
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          
+          return response;
         });
-        
-        return response;
       })
       .catch(() => {
-        // Network failed, try cache
-        return caches.match(request)
-          .then((cachedResponse) => {
-            if (cachedResponse) {
-              console.log('[SW] Serving from cache:', request.url);
-              return cachedResponse;
-            }
-            
-            // If not in cache and network failed, return offline page
-            if (request.destination === 'document') {
-              return caches.match('./index.html');
-            }
-            
-            return new Response('Network error', {
-              status: 408,
-              headers: { 'Content-Type': 'text/plain' }
-            });
-          });
+        // Offline fallback for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
       })
-  );
-});
-
-// Handle messages from clients
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-  
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((name) => caches.delete(name))
-        );
-      })
-    );
-  }
-});
-
-// Background sync (optional - for future features)
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync:', event.tag);
-  
-  if (event.tag === 'sync-data') {
-    event.waitUntil(
-      // Add your sync logic here
-      Promise.resolve()
-    );
-  }
-});
-
-// Push notifications (optional - for future features)
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push received');
-  
-  const options = {
-    body: event.data ? event.data.text() : 'New update available',
-    icon: './icon-192.png',
-    badge: './icon-72.png',
-    vibrate: [200, 100, 200],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    }
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification('Shop Admin', options)
-  );
-});
-
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked');
-  event.notification.close();
-  
-  event.waitUntil(
-    clients.openWindow('./')
   );
 });
